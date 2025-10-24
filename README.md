@@ -1,32 +1,46 @@
 # Talentum-TPO
-## 1. Preparación de VSCode
-### 1.1 Extensiones de Visual Studio Code
-1. Python
-2. Docker
-3. MongoDB for VSCode
-4. Neo4J VSCode Extension
-5. REST Client
+## ⚙️ 2. Información del Proyecto
+
+- **Lenguaje:** Python 3.11  
+- **Entorno:** Visual Studio Code  
+- **Bases de Datos NoSQL:**  
+  - MongoDB → para perfiles, ofertas y cursos  
+  - Neo4J → para relaciones y recomendaciones  
+  - Redis → para cache y sesiones  
+- **Virtualización:** Docker y Docker Compose
+
+## 🧩 1. Preparación de VSCode
+### 1.1 Extensiones necesarias
+
+1. Python (Microsoft)  
+2. Docker  
+3. MongoDB for VSCode  
+4. Neo4J VSCode Extension  
+5. REST Client *(opcional para testear endpoints)*  
 
 ### 1.2 Instalación del Entorno Virtual
-1. En la consola de VSCode ejecutá
+
+- **Paso 1.** Ejecutá desde la consola de VSCode para crear la carpeta de las dependencias. `[ctrl + ñ]`
 ```
   python -m venv venv
   venv\Scripts\activate
 ```
-2. Creá el archivo `requeriments.txt`
-```
-  pymongo
-  neo4j
-  redis
-  python-dotenv
-```
-3. Ejecutar desde la consola de VSCode
+
+- **Paso 2.** Creá el archivo `requeriments.txt`
+- [requeriments.txt](talentum-plus/requeriments.txt)
+
+- **Paso 3.** Ejecutá desde la consola de VSCode para instalar las dependencias.
 ```
   pip install -r requirements.txt
 ```
-## 2. Conexiones con las BDD
-1. Verificar que las bdd están bien configuradas
+
+## 🔗 2. Conexiones con las BDD
+### 1.1 Verificar que las BDD estén bien configuradas en Docker
+
+- **Paso 1.** Verificar que las bdd están bien configuradas
   - [Config MongoDB](talentum-plus/BDD%20Congif/MongoDB.txt)
   - [Config Neo4J](talentum-plus/BDD%20Congif/Neo4J.txt)
-3. Ejecutar test de conexiones
+  
+- **Paso 2.** Ejecutar test de conexiones
   - [Test de conexión](talentum-plus/src/config/test_database_conection.py)
+    
