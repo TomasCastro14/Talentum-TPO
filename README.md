@@ -27,7 +27,7 @@
 ```
 
 - **Paso 2.** Creá el archivo `requeriments.txt`
-- [requeriments.txt](talentum-plus/requeriments.txt)
+  - [requeriments.txt](talentum-plus/requeriments.txt)
 
 - **Paso 3.** Ejecutá desde la consola de VSCode para instalar las dependencias.
 ```
@@ -44,3 +44,7 @@
 - **Paso 2.** Ejecutar test de conexiones
   - [Test de conexión](talentum-plus/src/config/test_database_conection.py)
     
+## 🖥️ 3. Ejecución del Proyecto
+
+- **Paso 1.** En el [main](talentum-plus/src/main.py) escribí los usuarios que quieras agregar utilizando la función `crear_candidato()`
+  - En **MongoDB Express** debería aparecer la base de datos *talentum-db*
