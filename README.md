@@ -25,3 +25,4 @@
   pip install -r requirements.txt
 ```
 ## 2. Conexiones con las BDD
+[Test de conexión](talentum-plus/src/config/test_database_conection.py)
