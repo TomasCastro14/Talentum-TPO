@@ -26,7 +26,7 @@
 ```
 ## 2. Conexiones con las BDD
 1. Verificar que las bdd están bien configuradas
-  - [Config MongoDB](talentum-plus/BDD Congif/MongoDB.txt)
-  - [Config Neo4J](talentum-plus/BDD Congif/Neo4J.txt)
+  - [Config MongoDB](talentum-plus/BDD%20Congif/MongoDB.txt)
+  - [Config Neo4J](talentum-plus/BDD%20Congif/Neo4J.txt)
 3. Ejecutar test de conexiones
   - [Test de conexión](talentum-plus/src/config/test_database_conection.py)
