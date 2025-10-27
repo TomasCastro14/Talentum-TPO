@@ -43,6 +43,25 @@
   
 - **Paso 2.** Ejecutar test de conexiones
   - [Test de conexión](talentum-plus/src/config/test_database_conection.py)
+ 
+## 🖥️ 5. Estructura del Proyecto
+```
+talentium_plus/
+├─ README.md
+├─ src/
+│ ├─ main.py
+│ ├─ config/
+│ │ └─ database_conection.py
+│ ├─ controllers/
+│ │ └─ user_controller.py
+│ ├─ enums/
+│ │ ├─ estado_cuenta_enum.py
+│ │ ├─ genero_enum.py
+│ │ └─ tipo_usuario_enum.py
+│ └─ models/
+│   └─ usuario.py
+└─ requirements.txt
+```
     
 ## 🖥️ 4. Ejecución del Proyecto
 
