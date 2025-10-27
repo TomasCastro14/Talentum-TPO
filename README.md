@@ -44,7 +44,7 @@
 - **Paso 2.** Ejecutar test de conexiones
   - [Test de conexión](talentum-plus/src/config/test_database_conection.py)
  
-## 🖥️ 5. Estructura del Proyecto
+## 🌳 4. Estructura del Proyecto
 ```
 talentium_plus/
 ├─ README.md
@@ -63,7 +63,7 @@ talentium_plus/
 └─ requirements.txt
 ```
     
-## 🖥️ 4. Ejecución del Proyecto
+## 🖥️ 5. Ejecución del Proyecto
 
 - **Paso 1.** Ejecutá el [main](talentum-plus/src/main.py) seleccioná la opción 1 y rellená los datos del usuario por consola.
   - En **MongoDB Express** debería aparecer la base de datos *talentum-db*
