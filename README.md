@@ -46,5 +46,5 @@
     
 ## 🖥️ 4. Ejecución del Proyecto
 
-- **Paso 1.** En el [main](talentum-plus/src/main.py) escribí los usuarios que quieras agregar utilizando la función `crear_candidato()`
+- **Paso 1.** Ejecutá el [main](talentum-plus/src/main.py) seleccioná la opción 1 y rellená los datos del usuario por consola.
   - En **MongoDB Express** debería aparecer la base de datos *talentum-db*
