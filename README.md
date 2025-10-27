@@ -1,5 +1,5 @@
 # Talentum-TPO
-## ⚙️ 2. Información del Proyecto
+## ⚙️ 1. Información del Proyecto
 
 - **Lenguaje:** Python 3.11  
 - **Entorno:** Visual Studio Code  
@@ -9,8 +9,8 @@
   - Redis → para cache y sesiones  
 - **Virtualización:** Docker y Docker Compose
 
-## 🧩 1. Preparación de VSCode
-### 1.1 Extensiones necesarias
+## 🧩 2 Preparación de VSCode
+### 2.1 Extensiones necesarias
 
 1. Python (Microsoft)  
 2. Docker  
@@ -18,7 +18,7 @@
 4. Neo4J VSCode Extension  
 5. REST Client *(opcional para testear endpoints)*  
 
-### 1.2 Instalación del Entorno Virtual
+### 2.2 Instalación del Entorno Virtual
 
 - **Paso 1.** Ejecutá desde la consola de VSCode para crear la carpeta de las dependencias. `[ctrl + ñ]`
 ```
@@ -34,8 +34,8 @@
   pip install -r requirements.txt
 ```
 
-## 🔗 2. Conexiones con las BDD
-### 1.1 Verificar que las BDD estén bien configuradas en Docker
+## 🔗 3. Conexiones con las BDD
+### 3.1 Verificar que las BDD estén bien configuradas en Docker
 
 - **Paso 1.** Verificar que las bdd están bien configuradas
   - [Config MongoDB](talentum-plus/BDD%20Congif/MongoDB.txt)
@@ -44,7 +44,7 @@
 - **Paso 2.** Ejecutar test de conexiones
   - [Test de conexión](talentum-plus/src/config/test_database_conection.py)
     
-## 🖥️ 3. Ejecución del Proyecto
+## 🖥️ 4. Ejecución del Proyecto
 
 - **Paso 1.** En el [main](talentum-plus/src/main.py) escribí los usuarios que quieras agregar utilizando la función `crear_candidato()`
   - En **MongoDB Express** debería aparecer la base de datos *talentum-db*
