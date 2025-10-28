@@ -17,10 +17,10 @@ def cargar_modulos():
     return mongodb, neo4jdb, redisdb, user_controller
 
 def mostrar_menu():
-    print("=== Menú de Talentum Plus ===")
-    print("[1] Crear Usuario")
-    print("[2] Eliminar Usuario")
-    print("[3] Ver Candidatos")
+    print("\n\n=== Menú de Talentum Plus ===")
+    print("[1] Menú Usuarios")
+    print("[2] null")
+    print("[3] null")
     print("[0] Salir")
     print("=============================")
     print()
@@ -41,12 +41,39 @@ def start_application():
             break
 
         elif opcion == "1":
-            print("Opcion 1 - Crear Usuario\n")
-            user_controller.crear_usuario_input(mongodb)
+            print("Opcion 1 - Modificar Usuarios\n")
+            print("======== Menú Modificación de Usuarios ========")
+            print("[1] Crear nuevo usuario")
+            print("[2] Buscar por mail [TODO]")
+            print("[3] Cambiar estado de cuenta (Activo/Inactivo)")
+            print("[4] Cambiar nombre")
+            print("[5] Cambiar apellido")
+            print("[6] Cambiar género")
+            print("[7] Cambiar tipo")
+            print("===============================================\n")
+            opcion = input("Seleccione una opción: ")
+
+            match opcion:
+                case "1":
+                    UserController.crear_usuario_input(mongodb)
+                case "2":
+                    print("\n[TODO] Buscar por mail")
+                case "3":
+                    UserController.cambiar_estado_cuenta(mongodb)
+                case "4":
+                    UserController.cambiar_nombre_usuario(mongodb)
+                case "5":
+                    UserController.cambiar_apellido_usuario(mongodb)
+                case "6":
+                    UserController.cambiar_genero_usuario(mongodb)
+                case "7":
+                    UserController.cambiar_tipo_usuario(mongodb)
+                case _:
+                    print("\n[*] Volviendo al menú principal.")
 
         elif opcion == "2":
             print("Opcion 2 - Eliminar Usuario\n")
-            UserController.marcar_usuario_inactivo(mongodb, input("Ingrese el email del usuario a eliminar: ").strip().lower())
+            
 
         elif opcion == "3":
             print("Opcion 3")

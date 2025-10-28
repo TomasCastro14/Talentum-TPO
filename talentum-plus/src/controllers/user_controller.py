@@ -13,10 +13,41 @@ user_controller.py puede hacer las siguentes operaciones CRUD con MongoDB:
 """
 
 class UserController:
+    """
+    Métodos de Repetición
+    """
+    @staticmethod
+    def confirmar_accion(mensaje, variable_uno, variable_dos):
+        """Pide confirmación al usuario para continuar con una acción."""
+        print(f"[?] ¿{mensaje}? {variable_uno} -> {variable_dos}")
+        confirm = input("\tConfirmar (s/n): ").lower()
+
+        while confirm not in ('s', 'y', 'n'):
+            print(f"[!] Respuesta inválida. Por favor ingrese 's' para sí o 'n' para no.")
+            print(f"\n[?] ¿{mensaje}? {variable_uno} -> {variable_dos}")
+            confirm = input("\tConfirmar (s/n): ").lower()
+
+        match confirm:
+            case 's' | 'y':
+                return True
+            case 'n':
+                print("\n[-] Operación cancelada.")
+                return False
 
     """
     Métodos de Búsqueda
     """
+
+    @staticmethod
+    def email_input():
+        """Pide un email por consola y lo devuelve."""
+        email = input("Ingrese el email del usuario: ").strip().lower()
+
+        while not email:
+            print("[!] El email no puede estar vacío.")
+            email = input("Ingrese el email del usuario: ").strip().lower()
+
+        return email
 
     @staticmethod
     def buscar_usuario_mail(mongodb, email):
@@ -24,6 +55,11 @@ class UserController:
         Busca un usuario en la colección 'usuarios' por su email y lo devuelve como un diccionario.
         """
         doc = mongodb["usuarios"].find_one({"email": email})
+
+        if not doc:
+            print(f"[!] No se encontró ningún usuario con el email: {email}\n")
+            return False
+
         return doc
 
     """
@@ -37,8 +73,8 @@ class UserController:
         print("\n=== Crear nuevo usuario ===")
 
         # --- Datos básicos ---
-        nombre = input("Nombre: ")
-        apellido = input("Apellido: ")
+        nombre = input("Nombre: ").lower().title()
+        apellido = input("Apellido: ").lower().title()
         email = input("Email: ").strip().lower()
         dni = input("DNI: ")
 
@@ -121,35 +157,48 @@ class UserController:
     """
 
     @staticmethod
-    def marcar_usuario_inactivo(mongodb, email, pedir_confirmacion=True):
+    def cambiar_estado_cuenta(mongodb, pedir_confirmacion=True):
         """
+        Este método cambia el estado de la cuenta de un usuario a INACTIVO o ACTIVO, según el actual estado de la cuenta.
+        El programa NUNCA elimina usuarios, sino que los marca como inactivos.
         Manda a buscar a un usuario por el mail. Si lo encuentra, lo trae, y
         """
+        email = UserController.email_input()
         doc = UserController.buscar_usuario_mail(mongodb, email)
         if not doc:
-            print(f"[!] No se encontró ningún usuario con el email: {email}\n")
             return False
         
         nombre = doc.get("nombre", "<sin nombre>")
         apellido = doc.get("apellido", "<sin apellido>")
-        estado_actual = doc.get("activo", "<sin estado>")
+        estado_cuenta = doc.get("activo", "<sin estado>")
 
-        print(f"\n[!] Se encontró al usuario: {nombre} {apellido} - Estado actual: {estado_actual}")
+        print(f"\n[!] Se encontró al usuario: {nombre} {apellido} - Estado actual: {estado_cuenta}\n")
 
         if pedir_confirmacion:
-            confirm = input("¿Está seguro que desea marcar este usuario como INACTIVO? (s/n): ").lower()
+            confirm = input("¿Estás seguro que querés cambiar el estado del usuario? (s/n): ").lower()
             if confirm not in ('s', 'y'):
-                print("[*] Operación cancelada.\n")
                 return False
-        
-        fecha_baja = datetime.now().isoformat()
-        result = mongodb["usuarios"].update_one(
-            {"email": email},
-            {"$set": {
-                "activo": EstadoCuentaEnum.INACTIVO.value,
-                "fecha_baja": fecha_baja
-            }}
-        )
+
+        match doc.get("activo", "<sin estado>"):
+            case EstadoCuentaEnum.ACTIVO.value:
+                fecha_baja = datetime.now().isoformat()
+                result = mongodb["usuarios"].update_one(
+                    {"email": email},
+                    {"$set": {
+                        "activo": EstadoCuentaEnum.INACTIVO.value,
+                        "fecha_baja": fecha_baja
+                    }}
+                )
+                estado_cuenta = EstadoCuentaEnum.INACTIVO.value
+
+            case EstadoCuentaEnum.INACTIVO.value:
+                result = mongodb["usuarios"].update_one(
+                    {"email": email},
+                    {"$set": {
+                        "activo": EstadoCuentaEnum.ACTIVO.value
+                    }}
+                )
+                estado_cuenta = EstadoCuentaEnum.ACTIVO.value
 
         if result.matched_count == 0:
             print("[!] No se actualizó: el usuario dejó de existir entre la búsqueda y la actualización.")
@@ -159,5 +208,126 @@ class UserController:
             print("[!] El usuario ya estaba marcado como INACTIVO.")
             return True  # técnicamente no modificó pero la intención se cumplió
 
-        print(f"[+] Usuario {nombre} {apellido} marcado como INACTIVO correctamente.")
+        print(f"[+] Usuario {nombre} {apellido} marcado como {estado_cuenta.upper()} correctamente.")
         return True
+    
+    @staticmethod
+    def cambiar_nombre_usuario(mongodb):
+        email = UserController.email_input()
+        doc = UserController.buscar_usuario_mail(mongodb, email)
+        if not doc:
+            return False
+        
+        print(f"\n[!] Se encontró al usuario: {doc.get('nombre', '<sin nombre>')} {doc.get('apellido', '<sin apellido>')}\n")
+        nuevo_nombre = input("Ingrese el nuevo nombre: ").strip().lower().title()
+        if not UserController.confirmar_accion("Desea continuar con el cambio de nombre", doc.get('nombre', '<sin nombre>'), nuevo_nombre):
+            return False
+        
+        result = mongodb["usuarios"].update_one(
+            {"email": email},
+            {"$set": {
+                "nombre": nuevo_nombre
+            }}
+        )
+
+        print(f"[+] Nombre cambiado exitosamente a {nuevo_nombre}.")
+
+    @staticmethod
+    def cambiar_apellido_usuario(mongodb):
+        email = UserController.email_input()
+        doc = UserController.buscar_usuario_mail(mongodb, email)
+        if not doc:
+            return False
+        
+        print(f"\n[!] Se encontró al usuario: {doc.get('nombre', '<sin nombre>')} {doc.get('apellido', '<sin apellido>')}\n")
+        nuevo_apellido = input("Ingrese el nuevo apellido: ").strip().lower().title()   
+        if not UserController.confirmar_accion("Desea continuar con el cambio de apellido", doc.get('apellido', '<sin nombre>'), nuevo_apellido):
+            return False
+        
+        result = mongodb["usuarios"].update_one(
+            {"email": email},
+            {"$set": {
+                "apellido": nuevo_apellido
+            }}
+        )
+
+        print(f"[+] Apellido cambiado exitosamente a {nuevo_apellido}.")
+
+    @staticmethod
+    def cambiar_genero_usuario(mongodb):
+        email = UserController.email_input()
+        doc = UserController.buscar_usuario_mail(mongodb, email)
+        if not doc:
+            return False
+        
+        print(f"\n[!] Se encontró al usuario: {doc.get('nombre', '<sin nombre>')}, de género {doc.get('genero', '<sin genero>')}\n")
+
+        genero_input = input("Sleccione su nuevo género (M/F/X): ").upper()
+        if genero_input == "M":
+            nuevo_genero = Genero.M
+        elif genero_input == "F":
+            nuevo_genero = Genero.F
+        else:
+            nuevo_genero = Genero.X
+
+        if not UserController.confirmar_accion("Desea continuar con el cambio de género", doc.get('genero', '<sin nombre>'), nuevo_genero.value):
+            return False
+        
+        result = mongodb["usuarios"].update_one(
+            {"email": email},
+            {"$set": {
+                "genero": nuevo_genero.value
+            }}
+        )
+
+        print(f"[+] Género cambiado exitosamente a {nuevo_genero.value}.")
+
+    @staticmethod
+    def cambiar_tipo_usuario(mongodb):
+        email = UserController.email_input()
+        doc = UserController.buscar_usuario_mail(mongodb, email)
+        if not doc:
+            return False
+        
+        print(f"\n[!] Se encontró al usuario: {doc.get('nombre', '<sin nombre>')}, de tipo {doc.get('tipo_usuario', '<sin genero>')}\n")
+
+        print("Seleccione su nueva ocupación:")
+        print("1. Desempleado")
+        print("2. Empleado")
+        print("3. Reclutador")
+        tipo_input = int(input("Ocupación (1/2/3): "))
+
+        if tipo_input == 1:
+            nuevo_tipo = TipoUsuario.DESEMPLEADO
+        elif tipo_input == 2:
+            nuevo_tipo = TipoUsuario.EMPLEADO
+        elif tipo_input == 3:
+            nuevo_tipo == TipoUsuario.RECLUTADOR
+
+        if not UserController.confirmar_accion("Desea continuar con el cambio de apellido", doc.get('tipo_usuario', '<sin nombre>'), nuevo_tipo.name):
+            return False
+        
+        result = mongodb["usuarios"].update_one(
+            {"email": email},
+            {"$set": {
+                "tipo_usuario": nuevo_tipo.value
+            }}
+        )
+
+        print(f"[+] Tipo de usuario cambiado exitosamente a {nuevo_tipo.name}.")
+
+    @staticmethod
+    def agregar_experiencia_usuario(mongodb):
+        pass
+
+    @staticmethod
+    def agregar_historial_laboral_usuario(mongodb):
+        pass
+
+    @staticmethod
+    def agregar_historial_entrevistas_usuario(mongodb):
+        pass
+
+    @staticmethod
+    def agregar_relacion_usuario(mongodb):
+        pass
