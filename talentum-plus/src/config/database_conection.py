@@ -27,11 +27,13 @@ class DatabaseConnections:
 
             neo4j_driver = GraphDatabase.driver(uri, auth=(neo_user, neo_pass))
 
-            with neo4j_driver.session() as session:
+            with neo4j_driver.session(database="neo4j") as session:
                 res = session.run("RETURN 1 AS result")
                 print("[2/3] Neo4J OK ->", res.single()["result"])
+                return neo4j_driver
         except Exception as e:
             print("[!] Error conectando a Neo4J:", e)
+            return None
 
     def redis_connection(self):
         try:
