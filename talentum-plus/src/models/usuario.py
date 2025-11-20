@@ -50,6 +50,20 @@ class Usuario:
             "relaciones": self.relaciones
         }
 
+    def to_neo4j_node(self):
+        """Convierte el objeto en propiedades para Neo4J."""
+        return {
+            "nombre": self.nombre,
+            "apellido": self.apellido,
+            "email": self.email,
+            "dni": self.dni,
+            "genero": self.genero.value,
+            "fecha_nacimiento": self.fecha_nacimiento.isoformat(),
+            "edad": self.edad(),
+            "activo": self.activo.value,
+            "tipo_usuario": self.tipo_usuario.name
+        }
+
     def __str__(self):
         """Representación legible del usuario."""
         return f"{self.nombre} {self.apellido} ({self.tipo_usuario.name}) - Estado: {self.activo.value}"

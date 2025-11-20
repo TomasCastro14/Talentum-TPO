@@ -1,5 +1,6 @@
 from config.database_conection import DatabaseConnections
 from controllers.user_controller import UserController
+from controllers.neo4j_controller import NeoController
 
 def cargar_modulos():
     print("Iniciando Talentum Plus...\n")
@@ -7,19 +8,22 @@ def cargar_modulos():
     print("[+] Creando objetos...\n")
     database_connections = DatabaseConnections()
     user_controller = UserController()
+    # empresa_controller = EmpresaController()
 
     print("[0/3] Cargando módulos...")
     mongodb = database_connections.mongo_connection()
     neo4jdb = database_connections.neo4j_connection()
     redisdb = database_connections.redis_connection()
 
+    neo_controller = NeoController(neo4jdb)
+
     print()
-    return mongodb, neo4jdb, redisdb, user_controller
+    return mongodb, neo_controller, redisdb, user_controller
 
 def mostrar_menu():
     print("\n\n=== Menú de Talentum Plus ===")
     print("[1] Menú Usuarios")
-    print("[2] null")
+    print("[2] Menú Empresas")
     print("[3] null")
     print("[0] Salir")
     print("=============================")
@@ -30,7 +34,7 @@ def pausar():
 
 def start_application():
 
-    mongodb, neo4jdb, redisdb, user_controller = cargar_modulos()
+    mongodb, neo_controller, redisdb, user_controller = cargar_modulos()
 
     while True:
         mostrar_menu()
@@ -41,7 +45,7 @@ def start_application():
             break
 
         elif opcion == "1":
-            print("Opcion 1 - Modificar Usuarios\n")
+            print("Opcion 1 - Usuarios\n")
             print("======== Menú Modificación de Usuarios ========")
             print("[1] Crear nuevo usuario")
             print("[2] Buscar por mail [TODO]")
@@ -55,28 +59,49 @@ def start_application():
 
             match opcion:
                 case "1":
-                    UserController.crear_usuario_input(mongodb)
+                    UserController.crear_usuario_input(mongodb, neo_controller)
                 case "2":
                     print("\n[TODO] Buscar por mail")
                 case "3":
-                    UserController.cambiar_estado_cuenta(mongodb)
+                    UserController.cambiar_estado_cuenta(mongodb, neo_controller)
                 case "4":
-                    UserController.cambiar_nombre_usuario(mongodb)
+                    UserController.cambiar_nombre_usuario(mongodb, neo_controller)
                 case "5":
-                    UserController.cambiar_apellido_usuario(mongodb)
+                    UserController.cambiar_apellido_usuario(mongodb, neo_controller)
                 case "6":
-                    UserController.cambiar_genero_usuario(mongodb)
+                    UserController.cambiar_genero_usuario(mongodb, neo_controller)
                 case "7":
-                    UserController.cambiar_tipo_usuario(mongodb)
+                    UserController.cambiar_tipo_usuario(mongodb, neo_controller)
                 case _:
                     print("\n[*] Volviendo al menú principal.")
 
         elif opcion == "2":
-            print("Opcion 2 - Eliminar Usuario\n")
-            
+            print("Opcion 2 - Empresas\n")
 
         elif opcion == "3":
-            print("Opcion 3")
+            print("Opcion 3 - Databases\n")
+            print("======== Menú de Databases ========")
+            print("[1] Buscar por mail Neo4J")
+            print("===============================================\n")
+            opcion = input("Seleccione una opción: ")
+
+            match opcion:
+                case "1":
+                    UserController.buscar_usuario_neo4j(neo4jdb, UserController.email_input())
+                case "2":
+                    print("\n[TODO] Buscar por mail")
+                case "3":
+                    print("\n[TODO] Buscar por mail")
+                case "4":
+                    print("\n[TODO] Buscar por mail")
+                case "5":
+                    print("\n[TODO] Buscar por mail")
+                case "6":
+                    print("\n[TODO] Buscar por mail")
+                case "7":
+                    print("\n[TODO] Buscar por mail")
+                case _:
+                    print("\n[*] Volviendo al menú principal.")
 
         else:
             print("\n[!] Opción inválida. Intente nuevamente.\n")

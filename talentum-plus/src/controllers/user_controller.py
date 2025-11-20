@@ -1,3 +1,4 @@
+from controllers.neo4j_controller import NeoController
 from models.usuario import Usuario
 from enums.genero_enum import GeneroEnum as Genero
 from enums.tipo_usuario_enum import TipoUsuarioEnum as TipoUsuario
@@ -61,13 +62,24 @@ class UserController:
             return False
 
         return doc
+    
+    @staticmethod
+    def buscar_usuario_neo4j(neo4jdb, email):
+        query = "MATCH (u:Usuario {email: $email}) RETURN u"
+        with neo4jdb.session(database="neo4j") as session:
+            result = session.run(query, {"email": email}).single()
+            if result:
+                return result["u"]
+            else:
+                print(f"[!] No se encontró ningún usuario en Neo4J con el email: {email}\n")
+                return None
 
     """
     Métodos de Creación
     """
 
     @staticmethod
-    def crear_usuario_input(mongodb):
+    def crear_usuario_input(mongodb, neo_controller):
         """Recolecta datos desde consola y crea un nuevo usuario en la base de datos."""
 
         print("\n=== Crear nuevo usuario ===")
@@ -111,6 +123,7 @@ class UserController:
         # Llamamos a la función encargada de crear e insertar el usuario
         UserController.crear_usuario(
             mongodb=mongodb,
+            neo_controller=neo_controller,
             nombre=nombre,
             apellido=apellido,
             email=email,
@@ -124,7 +137,7 @@ class UserController:
         )
 
     @staticmethod
-    def crear_usuario(mongodb, nombre, apellido, email, dni, genero, fecha_nacimiento, tipo_usuario,
+    def crear_usuario(mongodb, neo_controller, nombre, apellido, email, dni, genero, fecha_nacimiento, tipo_usuario,
                       experiencia=None, historial_laboral=None, historial_entrevistas=None):
         """Crea un usuario y lo guarda en la colección 'usuarios'."""
         
@@ -148,9 +161,11 @@ class UserController:
         # Insertamos el usuario en la colección 'usuarios'
         try:
             mongodb["usuarios"].insert_one(nuevo_usuario.to_dict())
-            print(f"[+] Usuario {nombre} {apellido} creado exitosamente.\n")
+            neo_controller.crear_nodo_usuario(nuevo_usuario)
         except DuplicateKeyError:
             print(f"[!] El email '{email}' ya está registrado.\n")
+
+        print(f"[+] Usuario {nombre} {apellido} creado exitosamente.\n")
 
     """
     Métodos de Modificación (Update)
@@ -212,7 +227,7 @@ class UserController:
         return True
     
     @staticmethod
-    def cambiar_nombre_usuario(mongodb):
+    def cambiar_nombre_usuario(mongodb, neo_controller):
         email = UserController.email_input()
         doc = UserController.buscar_usuario_mail(mongodb, email)
         if not doc:
@@ -230,10 +245,14 @@ class UserController:
             }}
         )
 
+        # Neo4J
+        neo_controller.actualizar_usuario(email, {"nombre": nuevo_nombre})
+
+
         print(f"[+] Nombre cambiado exitosamente a {nuevo_nombre}.")
 
     @staticmethod
-    def cambiar_apellido_usuario(mongodb):
+    def cambiar_apellido_usuario(mongodb, neo_controller):
         email = UserController.email_input()
         doc = UserController.buscar_usuario_mail(mongodb, email)
         if not doc:
@@ -244,6 +263,7 @@ class UserController:
         if not UserController.confirmar_accion("Desea continuar con el cambio de apellido", doc.get('apellido', '<sin nombre>'), nuevo_apellido):
             return False
         
+        # Actualizamos en MongoDB
         result = mongodb["usuarios"].update_one(
             {"email": email},
             {"$set": {
@@ -251,10 +271,14 @@ class UserController:
             }}
         )
 
+        # Actualizamos en Neo4J
+        neo_controller.actualizar_usuario(email, {"apellido": nuevo_apellido})
+
+
         print(f"[+] Apellido cambiado exitosamente a {nuevo_apellido}.")
 
     @staticmethod
-    def cambiar_genero_usuario(mongodb):
+    def cambiar_genero_usuario(mongodb, neo_controller):
         email = UserController.email_input()
         doc = UserController.buscar_usuario_mail(mongodb, email)
         if not doc:
@@ -273,17 +297,22 @@ class UserController:
         if not UserController.confirmar_accion("Desea continuar con el cambio de género", doc.get('genero', '<sin nombre>'), nuevo_genero.value):
             return False
         
+        # Actualizamos en MongoDB
         result = mongodb["usuarios"].update_one(
             {"email": email},
             {"$set": {
                 "genero": nuevo_genero.value
             }}
         )
+        print(f"[+] Actualizado en MongoDB")
+
+        # Actualizamos en Neo4J
+        neo_controller.actualizar_usuario(email, {"genero": nuevo_genero.value})
 
         print(f"[+] Género cambiado exitosamente a {nuevo_genero.value}.")
 
     @staticmethod
-    def cambiar_tipo_usuario(mongodb):
+    def cambiar_tipo_usuario(mongodb, neo_controller):
         email = UserController.email_input()
         doc = UserController.buscar_usuario_mail(mongodb, email)
         if not doc:
@@ -313,6 +342,9 @@ class UserController:
                 "tipo_usuario": nuevo_tipo.value
             }}
         )
+
+        # Neo4J
+        neo_controller.actualizar_usuario(email, {"genero": nuevo_tipo.value})
 
         print(f"[+] Tipo de usuario cambiado exitosamente a {nuevo_tipo.name}.")
 
