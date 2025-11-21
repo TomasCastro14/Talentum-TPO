@@ -4,7 +4,7 @@ from models.usuario import Usuario
 from enums.genero_enum import GeneroEnum as Genero
 from enums.tipo_usuario_enum import TipoUsuarioEnum as TipoUsuario
 from enums.estado_cuenta_enum import EstadoCuentaEnum
-from datetime import datetime
+from datetime import date, datetime
 from pymongo.errors import DuplicateKeyError
 
 """
@@ -63,6 +63,32 @@ class UserController:
             return None
         
         return doc
+    
+    @staticmethod
+    def validar_usuario(mongo_controller, usuario_mail):
+        usuario_doc = mongo_controller.buscar_documento_mail(Usuario, usuario_mail)
+
+        while not usuario_doc:
+            print(f"\n[!] No existe un usuario con el email '{usuario_mail}'. Por favor, ingrese un email válido.")
+            usuario_mail = input("Email del reclutador: ")
+            usuario_doc = mongo_controller.buscar_documento_mail(Usuario, usuario_mail)
+
+        return usuario_mail
+    
+    @staticmethod
+    def seleccionar_postulacion(postulaciones):
+        print("\n=== Seleccione la postulación que desea iniciar ===")
+        for idx, post in enumerate(postulaciones, start=1):
+            print(f"{idx}. {post['titulo']} ({post['id_procedimiento']}) - Rubro: {post['rubro']}, Modalidad: {post['modalidad']}")
+        while True:
+            try:
+                seleccion = int(input("Ingrese el número de la postulación: "))
+                if 1 <= seleccion <= len(postulaciones):
+                    return postulaciones[seleccion - 1]
+                else:
+                    print(f"[!] Ingrese un número entre 1 y {len(postulaciones)}.")
+            except ValueError:
+                print("[!] Ingrese un número válido.")
 
     @staticmethod
     def buscar_usuario_neo4j(neo4jdb, email):
@@ -121,28 +147,6 @@ class UserController:
             email = input("Email: ").strip().lower()
             doc = UserController.buscar_usuario_mail(mongo_controller, email)
 
-        # Llamamos a la función encargada de crear e insertar el usuario
-        UserController.crear_usuario(
-            mongo_controller=mongo_controller,
-            neo_controller=neo_controller,
-            nombre=nombre,
-            apellido=apellido,
-            email=email,
-            dni=dni,
-            genero=genero,
-            fecha_nacimiento=fecha_nacimiento,
-            tipo_usuario=tipo_usuario,
-            experiencia=[experiencia] if experiencia else [],
-            historial_laboral=historial_laboral,
-            historial_entrevistas=historial_entrevistas
-        )
-
-    @staticmethod
-    def crear_usuario(mongo_controller, neo_controller, nombre, apellido, email, dni, genero, fecha_nacimiento, tipo_usuario,
-                      experiencia=None, historial_laboral=None, historial_entrevistas=None):
-        """Crea un usuario y lo guarda en la colección 'usuarios'."""
-        
-        # Creamos el objeto Usuario
         nuevo_usuario = Usuario(
             nombre=nombre,
             apellido=apellido,
@@ -156,6 +160,13 @@ class UserController:
             historial_entrevistas=historial_entrevistas or []
         )
 
+        # Llamamos a la función encargada de crear e insertar el usuario
+        UserController.crear_usuario(mongo_controller, neo_controller, nuevo_usuario)
+
+    @staticmethod
+    def crear_usuario(mongo_controller, neo_controller, nuevo_usuario):
+        """Crea un usuario y lo guarda en la colección 'usuarios'."""
+
         # Aseguramos que exista un índice único en el campo 'email'
         try:
             mongo_controller.driver[Usuario.collection_name].create_index("email", unique=True)
@@ -165,11 +176,11 @@ class UserController:
         # Insertamos el usuario en la colección 'usuarios'
         try:
             mongo_controller.insertar_documento(nuevo_usuario)
-            neo_controller.crear_nodo_usuario(nuevo_usuario)
+            neo_controller.crear_nodo(nuevo_usuario)
         except DuplicateKeyError:
-            print(f"[!] El email '{email}' ya está registrado.\n")
+            print(f"[!] El email '{nuevo_usuario.email}' ya está registrado.\n")
 
-        print(f"[+] Usuario {nombre} {apellido} creado exitosamente.\n")
+        print(f"[+] Usuario {nuevo_usuario.nombre} {nuevo_usuario.apellido} creado exitosamente.\n")
 
     """
     Métodos de Modificación (Update)
@@ -349,3 +360,147 @@ class UserController:
     @staticmethod
     def agregar_relacion_usuario(mongodb):
         pass
+
+    """
+    Métodos de Recomendación
+    """
+    @staticmethod
+    def recomendar_postulaciones_rubro(mongo_controller, neo_controller):
+        usuario_mail = UserController.validar_usuario(
+            mongo_controller,
+            input("Email del usuario a recomendar postulaciones: ")
+        )
+        usuario = UserController.buscar_usuario_mail(mongo_controller, usuario_mail)
+
+        historial = usuario.get("historial_laboral", [])
+        if not historial:
+            print("[!] El usuario no tiene historial laboral registrado.")
+            return []
+
+        recomendaciones = []
+
+        for rubro in historial:  # ahora cada 'rubro' es un string
+            if not rubro:
+                continue
+
+            postulaciones = neo_controller.buscar_nodos_por_campo(
+                label="Busqueda",
+                campo="rubro",
+                valor=rubro,
+                operador="="  # Igualdad exacta
+            )
+            recomendaciones.extend(postulaciones)
+
+        # Eliminar duplicados por id_procedimiento
+        recomendaciones = {p["id_procedimiento"]: p for p in recomendaciones}.values()
+
+        # Mostrar resultados
+        print("\n=== Postulaciones recomendadas ===")
+        for b in recomendaciones:
+            print(f"- {b['titulo']} ({b['id_procedimiento']})")
+            #print(f"  Mail de la empresa: {b['empresa_email']}")
+            print(f"  Rubro: {b['rubro']}")
+            print(f"  Modalidad: {b['modalidad']}")
+            print(f"  Descripción: {b['descripcion']}")
+            print("==================================\n")
+    
+    @staticmethod
+    def recomendar_postulaciones_ubicacion(mongo_controller, neo_controller):
+        ubicacion_usuario = input("Ingrese la ubicación deseada: ").lower().title()
+
+        recomendaciones = []
+
+        # Buscamos las postulaciones que coincidan con la ubicación
+        postulaciones = neo_controller.buscar_nodos_por_campo(
+            label="Busqueda",
+            campo="ubicacion",
+            valor=ubicacion_usuario,
+            operador="="  # Igualdad exacta
+        )
+        recomendaciones.extend(postulaciones)
+
+        # Eliminar duplicados por id_procedimiento
+        recomendaciones = {p["id_procedimiento"]: p for p in recomendaciones}.values()
+
+        # Mostrar resultados
+        print("\n=== Postulaciones recomendadas por ubicación ===")
+        for b in recomendaciones:
+            print(f"- {b['titulo']} ({b['id_procedimiento']})")
+            print(f"  Rubro: {b['rubro']}")
+            print(f"  Modalidad: {b['modalidad']}")
+            print(f"  Descripción: {b['descripcion']}")
+            print("==================================\n")
+
+        return list(recomendaciones)
+    
+    @staticmethod
+    def recomendar_postulaciones_modalidad(mongo_controller, neo_controller):
+        modalidad_usuario = input("Ingrese la modalidad deseada (presencial, virtual, mixto): ").lower()
+
+        recomendaciones = []
+
+        # Buscamos las postulaciones que coincidan con la modalidad
+        postulaciones = neo_controller.buscar_nodos_por_campo(
+            label="Busqueda",
+            campo="modalidad",
+            valor=modalidad_usuario,
+            operador="="  # Igualdad exacta
+        )
+        recomendaciones.extend(postulaciones)
+
+        # Eliminar duplicados por id_procedimiento
+        recomendaciones = {p["id_procedimiento"]: p for p in recomendaciones}.values()
+
+        # Mostrar resultados
+        print("\n=== Postulaciones recomendadas por modalidad ===")
+        for b in recomendaciones:
+            print(f"- {b['titulo']} ({b['id_procedimiento']})")
+            print(f"  Rubro: {b['rubro']}")
+            print(f"  Modalidad: {b['modalidad']}")
+            print(f"  Descripción: {b['descripcion']}")
+            print("==================================\n")
+
+        return list(recomendaciones)
+
+    @staticmethod
+    def iniciar_postulacion(mongo_controller, neo_controller, postulaciones):
+        if not postulaciones:
+            print("[!] No hay postulaciones disponibles para iniciar.")
+            return
+
+        # --- Validar usuario ---
+        usuario_doc = UserController.validar_usuario(
+            mongo_controller,
+            input("Ingrese su email para iniciar la postulación: ")
+        )
+
+        # Reconstruir objeto Usuario desde el documento de Mongo
+        usuario = Usuario(
+            nombre=usuario_doc["nombre"],
+            apellido=usuario_doc["apellido"],
+            email=usuario_doc["email"],
+            dni=usuario_doc["dni"],
+            genero=Genero(usuario_doc["genero"]),
+            fecha_nacimiento=date.fromisoformat(usuario_doc["fecha_nacimiento"]),
+            tipo_usuario=TipoUsuario[usuario_doc["tipo_usuario"]],
+            experiencia=usuario_doc.get("experiencia", []),
+            historial_laboral=usuario_doc.get("historial_laboral", []),
+            historial_entrevistas=usuario_doc.get("historial_entrevistas", []),
+            relaciones=usuario_doc.get("relaciones", [])
+        )
+
+        # --- Seleccionar postulación ---
+        post_seleccionada = UserController.seleccionar_postulacion(postulaciones)
+
+        # --- Crear relación en Neo4J ---
+        try:
+            neo_controller.crear_relacion(
+                obj_origen=usuario,
+                obj_destino_label="Busqueda",
+                obj_destino_key="id_procedimiento",
+                obj_destino_value=post_seleccionada["id_procedimiento"],
+                relacion="POSTULA_A"
+            )
+            print(f"[+] Postulación iniciada correctamente para {usuario.email} a {post_seleccionada['titulo']}")
+        except Exception as e:
+            print(f"[!] Error al iniciar la postulación: {e}")
