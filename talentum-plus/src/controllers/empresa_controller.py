@@ -1,5 +1,9 @@
+
+from controllers.mongo_controller import MongoController
+from controllers.neo4j_controller import NeoController
 from models.empresa import Empresa
 from pymongo.errors import DuplicateKeyError
+from datetime import datetime
 
 '''
 empresa_controller.py puede hacer las siguientes operaciones CRUD con MongoDB:
@@ -7,44 +11,58 @@ empresa_controller.py puede hacer las siguientes operaciones CRUD con MongoDB:
 '''
 
 class EmpresaController:
-
+    """
+    Métodos de creación
+    """
     @staticmethod
-    def buscar_empresa_matricula(mongodb, matricula):
-        """Busca una empresa por su matrícula en la colección 'empresas'."""
-        return mongodb["empresas"].find_one({"matricula": matricula})
+    def crear_empresa_input(mongo_controller, neo_controller):
+        print("\n=== Crear Nueva Empresa ===")
+        nombre = input("Nombre de la empresa: ")
+        matricula = input("Matrícula: ")
+        email = input("Email: ")
+        descripcion = input("Descripción: ")
+        rubro = input("Rubro (separar por comas): ").split(",")
+        pais_origen = input("País de origen: ")
 
-    @staticmethod
-    def crear_empresa_input(mongodb):
-        """Solicita datos al usuario para crear una nueva empresa."""
+        # --- Fecha de fundación ---
+        fecha_fundacion_str = input("Fecha de nacimiento (AAAA-MM-DD): ")
+        fecha_fundacion = datetime.strptime(fecha_fundacion_str, "%Y-%m-%d").date()
 
-        print("======== Crear Nueva Empresa ========")
-
-        # --- Datos básicos ---
-        nombre = input("Ingrese el nombre de la empresa: ")
-        anio_fundacion = input("Ingrese el año de fundación: ")
-        matricula = input("Ingrese la matrícula: ")
-
-        # Verificamos que la matrícula sea única
-        doc = Empresa
-
-        EmpresaController.crear_empresa(mongodb, nombre, anio_fundacion, matricula)
-
-    @staticmethod
-    def crear_empresa(mongodb, nombre, anio_fundacion, matricula):
-        """Crea una nueva empresa y la guarda en la base colección 'empresas'."""
-
-        # Aseguramos que exista un índice único en el campo 'matricula'
-        mongodb["empresas"].create_index("matricula", unique=True)
-
+        # Verificamos que no exista una empresa con el mismo mail
+        doc = mongo_controller.buscar_documento_mail(Empresa, email)
+        while doc:
+            print(f"\n[!] Ya existe una empresa con el email '{email}'. Por favor, ingrese un email diferente.")
+            email = input("Email: ")
+            doc = mongo_controller.buscar_documento_mail(Empresa, email)
+        
+        # Crear la nueva empresa
         nueva_empresa = Empresa(
             nombre=nombre,
-            anio_fundacion=anio_fundacion,
-            matricula=matricula
+            matricula=matricula,
+            email=email,
+            descripcion=descripcion,
+            rubro=rubro,
+            pais_origen=pais_origen,
+            fecha_fundacion=fecha_fundacion
         )
 
-        # Insertamos la empresa en la colección 'empresas'
+        # La mandamos a crear_emrpesa
+        EmpresaController.crear_empresa(mongo_controller, neo_controller, nueva_empresa)
+    
+    @staticmethod
+    def crear_empresa(mongo_controller, neo_controller, empresa: Empresa):
+
+        # Aseguramos que exista un índice único en el campo 'email'
         try:
-            mongodb["empresas"].insert_one(nueva_empresa.to_dict())
-            print(f"\n[+] Empresa '{nombre}' creada exitosamente.")
+            mongo_controller.driver[Empresa.collection_name].create_index("email", unique=True)
+        except Exception as e:
+            print(f"[!] Error al crear índice único en email: {e}")
+
+         # Insertamos el usuario en la colección 'usuarios'
+        try:
+            mongo_controller.insertar_documento(empresa)
+            neo_controller.crear_nodo(empresa)
         except DuplicateKeyError:
-            print(f"\n[!] Error: Ya existe una empresa con la matrícula '{matricula}'.")
+            print(f"[!] El email '{empresa.email}' ya está registrado.\n")
+
+        print(f"[+] Usuario {empresa.nombre} creado exitosamente.\n")

@@ -5,6 +5,7 @@ from datetime import date
 
 class Usuario:
     collection_name = "usuarios"
+    neo_label = "Usuario"
 
     def __init__(self, nombre, apellido, email, dni, genero, fecha_nacimiento,  
                  tipo_usuario, experiencia=None, historial_laboral=None, historial_entrevistas=None, relaciones=None):
@@ -51,6 +52,9 @@ class Usuario:
             "historial_entrevistas": self.historial_entrevistas,
             "relaciones": self.relaciones
         }
+    
+    def get_neo4j_key(self):
+        return "id_procedimiento"
 
     def to_neo4j_node(self):
         """Convierte el objeto en propiedades para Neo4J."""
