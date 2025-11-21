@@ -1,4 +1,5 @@
 from controllers.neo4j_controller import NeoController
+from controllers.mongo_controller import MongoController
 from models.usuario import Usuario
 from enums.genero_enum import GeneroEnum as Genero
 from enums.tipo_usuario_enum import TipoUsuarioEnum as TipoUsuario
@@ -51,18 +52,18 @@ class UserController:
         return email
 
     @staticmethod
-    def buscar_usuario_mail(mongodb, email):
+    def buscar_usuario_mail(mongo_controller, email):
         """
         Busca un usuario en la colección 'usuarios' por su email y lo devuelve como un diccionario.
         """
-        doc = mongodb["usuarios"].find_one({"email": email})
+        doc = mongo_controller.buscar_documento_mail(Usuario, email)
 
         if not doc:
-            print(f"[!] No se encontró ningún usuario con el email: {email}\n")
-            return False
-
+            print(f"[!] No se encontró ningún usuario en MongoDB con el email: {email}\n")
+            return None
+        
         return doc
-    
+
     @staticmethod
     def buscar_usuario_neo4j(neo4jdb, email):
         query = "MATCH (u:Usuario {email: $email}) RETURN u"
@@ -79,7 +80,7 @@ class UserController:
     """
 
     @staticmethod
-    def crear_usuario_input(mongodb, neo_controller):
+    def crear_usuario_input(mongo_controller, neo_controller):
         """Recolecta datos desde consola y crea un nuevo usuario en la base de datos."""
 
         print("\n=== Crear nuevo usuario ===")
@@ -114,15 +115,15 @@ class UserController:
         historial_entrevistas = input("Historial de entrevistas (separadas por comas): ").split(',')
 
         # Verificamos que el mail del usuario sea único
-        doc = UserController.buscar_usuario_mail(mongodb, email)
+        doc = UserController.buscar_usuario_mail(mongo_controller, email)
         while doc:
             print(f"[!] El usuario ya existe.\n")
             email = input("Email: ").strip().lower()
-            doc = UserController.buscar_usuario_mail(mongodb, email)
+            doc = UserController.buscar_usuario_mail(mongo_controller, email)
 
         # Llamamos a la función encargada de crear e insertar el usuario
         UserController.crear_usuario(
-            mongodb=mongodb,
+            mongo_controller=mongo_controller,
             neo_controller=neo_controller,
             nombre=nombre,
             apellido=apellido,
@@ -137,13 +138,10 @@ class UserController:
         )
 
     @staticmethod
-    def crear_usuario(mongodb, neo_controller, nombre, apellido, email, dni, genero, fecha_nacimiento, tipo_usuario,
+    def crear_usuario(mongo_controller, neo_controller, nombre, apellido, email, dni, genero, fecha_nacimiento, tipo_usuario,
                       experiencia=None, historial_laboral=None, historial_entrevistas=None):
         """Crea un usuario y lo guarda en la colección 'usuarios'."""
         
-        # Aseguramos que exista un índice único en el campo 'email'
-        mongodb["usuarios"].create_index("email", unique=True)
-
         # Creamos el objeto Usuario
         nuevo_usuario = Usuario(
             nombre=nombre,
@@ -158,9 +156,15 @@ class UserController:
             historial_entrevistas=historial_entrevistas or []
         )
 
+        # Aseguramos que exista un índice único en el campo 'email'
+        try:
+            mongo_controller.driver[Usuario.collection_name].create_index("email", unique=True)
+        except Exception as e:
+            print(f"[!] Error al crear índice único en email: {e}")
+
         # Insertamos el usuario en la colección 'usuarios'
         try:
-            mongodb["usuarios"].insert_one(nuevo_usuario.to_dict())
+            mongo_controller.insertar_documento(nuevo_usuario)
             neo_controller.crear_nodo_usuario(nuevo_usuario)
         except DuplicateKeyError:
             print(f"[!] El email '{email}' ya está registrado.\n")
@@ -227,9 +231,9 @@ class UserController:
         return True
     
     @staticmethod
-    def cambiar_nombre_usuario(mongodb, neo_controller):
+    def cambiar_nombre_usuario(mongo_controller, neo_controller):
         email = UserController.email_input()
-        doc = UserController.buscar_usuario_mail(mongodb, email)
+        doc = UserController.buscar_usuario_mail(mongo_controller, email)
         if not doc:
             return False
         
@@ -237,24 +241,18 @@ class UserController:
         nuevo_nombre = input("Ingrese el nuevo nombre: ").strip().lower().title()
         if not UserController.confirmar_accion("Desea continuar con el cambio de nombre", doc.get('nombre', '<sin nombre>'), nuevo_nombre):
             return False
-        
-        result = mongodb["usuarios"].update_one(
-            {"email": email},
-            {"$set": {
-                "nombre": nuevo_nombre
-            }}
-        )
 
         # Neo4J
+        mongo_controller.actualizar_documento(collection_name="usuarios", filtro={"email": email}, campos={"nombre": nuevo_nombre.value})
         neo_controller.actualizar_usuario(email, {"nombre": nuevo_nombre})
 
 
         print(f"[+] Nombre cambiado exitosamente a {nuevo_nombre}.")
 
     @staticmethod
-    def cambiar_apellido_usuario(mongodb, neo_controller):
+    def cambiar_apellido_usuario(mongo_controller, neo_controller):
         email = UserController.email_input()
-        doc = UserController.buscar_usuario_mail(mongodb, email)
+        doc = UserController.buscar_usuario_mail(mongo_controller, email)
         if not doc:
             return False
         
@@ -262,25 +260,18 @@ class UserController:
         nuevo_apellido = input("Ingrese el nuevo apellido: ").strip().lower().title()   
         if not UserController.confirmar_accion("Desea continuar con el cambio de apellido", doc.get('apellido', '<sin nombre>'), nuevo_apellido):
             return False
-        
-        # Actualizamos en MongoDB
-        result = mongodb["usuarios"].update_one(
-            {"email": email},
-            {"$set": {
-                "apellido": nuevo_apellido
-            }}
-        )
 
         # Actualizamos en Neo4J
+        mongo_controller.actualizar_documento(collection_name="usuarios", filtro={"email": email}, campos={"apellido": nuevo_apellido.value})
         neo_controller.actualizar_usuario(email, {"apellido": nuevo_apellido})
 
 
         print(f"[+] Apellido cambiado exitosamente a {nuevo_apellido}.")
 
     @staticmethod
-    def cambiar_genero_usuario(mongodb, neo_controller):
+    def cambiar_genero_usuario(mongo_controller, neo_controller):
         email = UserController.email_input()
-        doc = UserController.buscar_usuario_mail(mongodb, email)
+        doc = UserController.buscar_usuario_mail(mongo_controller, email)
         if not doc:
             return False
         
@@ -298,23 +289,24 @@ class UserController:
             return False
         
         # Actualizamos en MongoDB
-        result = mongodb["usuarios"].update_one(
-            {"email": email},
-            {"$set": {
-                "genero": nuevo_genero.value
-            }}
-        )
+        # result = mongodb["usuarios"].update_one(
+        #    {"email": email},
+        #    {"$set": {
+        #        "genero": nuevo_genero.value
+        #    }}
+        #)
         print(f"[+] Actualizado en MongoDB")
 
-        # Actualizamos en Neo4J
+        # Actualizamos en las BDD
+        mongo_controller.actualizar_documento(collection_name="usuarios", filtro={"email": email}, campos={"genero": nuevo_genero.value})
         neo_controller.actualizar_usuario(email, {"genero": nuevo_genero.value})
 
         print(f"[+] Género cambiado exitosamente a {nuevo_genero.value}.")
 
     @staticmethod
-    def cambiar_tipo_usuario(mongodb, neo_controller):
+    def cambiar_tipo_usuario(mongo_controller, neo_controller):
         email = UserController.email_input()
-        doc = UserController.buscar_usuario_mail(mongodb, email)
+        doc = UserController.buscar_usuario_mail(mongo_controller, email)
         if not doc:
             return False
         
@@ -335,15 +327,9 @@ class UserController:
 
         if not UserController.confirmar_accion("Desea continuar con el cambio de apellido", doc.get('tipo_usuario', '<sin nombre>'), nuevo_tipo.name):
             return False
-        
-        result = mongodb["usuarios"].update_one(
-            {"email": email},
-            {"$set": {
-                "tipo_usuario": nuevo_tipo.value
-            }}
-        )
 
         # Neo4J
+        mongo_controller.actualizar_documento(collection_name="usuarios", filtro={"email": email}, campos={"tipo_usuario": nuevo_tipo.value})
         neo_controller.actualizar_usuario(email, {"genero": nuevo_tipo.value})
 
         print(f"[+] Tipo de usuario cambiado exitosamente a {nuevo_tipo.name}.")

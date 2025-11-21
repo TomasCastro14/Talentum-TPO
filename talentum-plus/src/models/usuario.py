@@ -4,9 +4,11 @@ from enums.tipo_usuario_enum import TipoUsuarioEnum
 from datetime import date
 
 class Usuario:
+    collection_name = "usuarios"
+
     def __init__(self, nombre, apellido, email, dni, genero, fecha_nacimiento,  
                  tipo_usuario, experiencia=None, historial_laboral=None, historial_entrevistas=None, relaciones=None):
-        
+
         # --- Datos Físicos ---
         self.nombre = nombre
         self.apellido = apellido

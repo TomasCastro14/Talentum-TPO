@@ -1,6 +1,7 @@
 from config.database_conection import DatabaseConnections
 from controllers.user_controller import UserController
 from controllers.neo4j_controller import NeoController
+from controllers.mongo_controller import MongoController
 
 def cargar_modulos():
     print("Iniciando Talentum Plus...\n")
@@ -16,9 +17,10 @@ def cargar_modulos():
     redisdb = database_connections.redis_connection()
 
     neo_controller = NeoController(neo4jdb)
+    mongo_controller = MongoController(mongodb)
 
     print()
-    return mongodb, neo_controller, redisdb, user_controller
+    return mongo_controller, neo_controller, redisdb, user_controller
 
 def mostrar_menu():
     print("\n\n=== Menú de Talentum Plus ===")
@@ -34,7 +36,7 @@ def pausar():
 
 def start_application():
 
-    mongodb, neo_controller, redisdb, user_controller = cargar_modulos()
+    mongo_controller, neo_controller, redisdb, user_controller = cargar_modulos()
 
     while True:
         mostrar_menu()
@@ -59,19 +61,19 @@ def start_application():
 
             match opcion:
                 case "1":
-                    UserController.crear_usuario_input(mongodb, neo_controller)
+                    UserController.crear_usuario_input(mongo_controller, neo_controller)
                 case "2":
                     print("\n[TODO] Buscar por mail")
                 case "3":
-                    UserController.cambiar_estado_cuenta(mongodb, neo_controller)
+                    UserController.cambiar_estado_cuenta(mongo_controller, neo_controller)
                 case "4":
-                    UserController.cambiar_nombre_usuario(mongodb, neo_controller)
+                    UserController.cambiar_nombre_usuario(mongo_controller, neo_controller)
                 case "5":
-                    UserController.cambiar_apellido_usuario(mongodb, neo_controller)
+                    UserController.cambiar_apellido_usuario(mongo_controller, neo_controller)
                 case "6":
-                    UserController.cambiar_genero_usuario(mongodb, neo_controller)
+                    UserController.cambiar_genero_usuario(mongo_controller, neo_controller)
                 case "7":
-                    UserController.cambiar_tipo_usuario(mongodb, neo_controller)
+                    UserController.cambiar_tipo_usuario(mongo_controller, neo_controller)
                 case _:
                     print("\n[*] Volviendo al menú principal.")
 
